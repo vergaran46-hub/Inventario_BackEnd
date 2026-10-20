@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block titulo %}RG Beauty Spa{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'inventario/css/estilos.css' %}">
+</head>
+<body>
+  <nav>
+    <a href="{% url 'home' %}"><img src="{% static 'inventario/img/logo_menu.jpg' %}" alt="RG Beauty Spa"></a>
+    <div>
+      <a href="{% url 'home' %}">Inicio</a>
+      <form method="post" action="{% url 'logout' %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit">Salir ({{ user.username }})</button>
+      </form>
+    </div>
+  </nav>
+  <div class="contenedor">
+    {% block contenido %}{% endblock %}
+  </div>
+</body>
+</html>
