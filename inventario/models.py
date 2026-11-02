@@ -10,12 +10,21 @@ class Categoria(models.Model):
         return self.nombre
 
 
+class Etiqueta(models.Model):
+    nombre = models.CharField(max_length=40)
+
+    def __str__(self):
+        return self.nombre
+
+
 class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True)
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, related_name='productos', null=True, blank=True)
+    etiquetas = models.ManyToManyField(Etiqueta, related_name='productos', blank=True)
     stock_actual = models.PositiveIntegerField(default=0)
     stock_minimo = models.PositiveIntegerField(default=0)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='productos', null=True, blank=True)
 
     def __str__(self):
         return self.nombre
