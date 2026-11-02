@@ -1,20 +1,23 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Producto, Movimiento
+from .models import Producto, Categoria, Etiqueta, Movimiento
 
 
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ['nombre', 'categoria', 'descripcion', 'stock_actual', 'stock_minimo']
+        fields = ['nombre', 'categoria', 'etiquetas', 'descripcion', 'stock_actual', 'stock_minimo']
         labels = {
             'nombre': 'Nombre del producto',
             'categoria': '¿A qué grupo pertenece?',
+            'etiquetas': 'Etiquetas (opcional)',
             'descripcion': 'Descripción (opcional)',
             'stock_actual': '¿Cuántas unidades tienes hoy?',
             'stock_minimo': 'Avisarme cuando queden...',
         }
         help_texts = {
+            'etiquetas': 'Marca todas las que apliquen.',
             'stock_minimo': 'Cuando queden estas unidades o menos, el sistema te avisará que hay que comprar.',
         }
         error_messages = {
@@ -25,11 +28,52 @@ class ProductoForm(forms.ModelForm):
         widgets = {
             'nombre': forms.TextInput(attrs={'placeholder': 'Por ejemplo: Crema hidratante facial'}),
             'descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Por ejemplo: pote de 250 ml'}),
+            'etiquetas': forms.CheckboxSelectMultiple,
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['categoria'].empty_label = 'Sin grupo'
+        self.fields['etiquetas'].queryset = Etiqueta.objects.order_by('nombre')
+
+    # Validación propia: el nombre debe tener al menos 3 letras
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre'].strip()
+        if len(nombre) < 3:
+            raise forms.ValidationError('El nombre debe tener al menos 3 caracteres.')
+        return nombre
+
+
+class RegistroForm(UserCreationForm):
+    email = forms.EmailField(label='Correo electrónico')
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username', 'email')
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Ese correo ya está registrado.')
+        return email
+
+
+class PerfilForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        labels = {
+            'first_name': 'Nombre',
+            'last_name': 'Apellido',
+            'email': 'Correo electrónico',
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('Ese correo ya lo usa otra persona.')
+        return email
 
 
 class MovimientoForm(forms.ModelForm):
@@ -42,17 +86,7 @@ class MovimientoForm(forms.ModelForm):
             'motivo': '¿Por qué?',
             'cantidad': '¿Cuántas unidades?',
         }
-        widgets = {
-            'tipo': forms.RadioSelect,
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    
-        self.fields['tipo'].choices = [
-            ('ENTRADA', 'Llegó mercadería'),
-            ('SALIDA', 'Se vendió o se usó'),
-        ]
+        widgets = {'tipo': forms.RadioSelect}
 
     def clean_cantidad(self):
         cantidad = self.cleaned_data['cantidad']
@@ -64,31 +98,7 @@ class MovimientoForm(forms.ModelForm):
         datos = super().clean()
         producto = datos.get('producto')
         tipo = datos.get('tipo')
-        motivo = datos.get('motivo')
         cantidad = datos.get('cantidad')
-
-
-        if tipo == 'ENTRADA' and motivo and motivo != 'COMPRA':
-            self.add_error('motivo', 'Si llegó mercadería, el motivo es Compra.')
-        if tipo == 'SALIDA' and motivo and motivo == 'COMPRA':
-            self.add_error('motivo', 'Si el producto salió, elige Venta o Uso interno.')
-
-    
-        if tipo == 'SALIDA' and producto and cantidad:
-            if cantidad > producto.stock_actual:
-                self.add_error(
-                    'cantidad',
-                    f'Hay {producto.stock_actual} unidades y se piden {cantidad}. Escribe {producto.stock_actual} o menos.'
-                )
+        if tipo == 'SALIDA' and producto and cantidad and cantidad > producto.stock_actual:
+            self.add_error('cantidad', f'Hay {producto.stock_actual} unidades y se piden {cantidad}.')
         return datos
-
-
-class PerfilForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'email']
-        labels = {
-            'first_name': 'Nombre',
-            'last_name': 'Apellido',
-            'email': 'Correo electrónico',
-        }
