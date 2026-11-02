@@ -32,7 +32,6 @@ def home(request):
     paginator = Paginator(productos, 5)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    # Para conservar búsqueda y filtro al cambiar de página
     params = request.GET.copy()
     params.pop('page', None)
 
