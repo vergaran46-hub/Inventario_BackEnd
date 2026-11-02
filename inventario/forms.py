@@ -1,7 +1,11 @@
+import re
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Producto, Categoria, Etiqueta, Movimiento
+
+
+LIMITE_STOCK = 100
 
 
 class ProductoForm(forms.ModelForm):
@@ -29,6 +33,8 @@ class ProductoForm(forms.ModelForm):
             'nombre': forms.TextInput(attrs={'placeholder': 'Por ejemplo: Crema hidratante facial'}),
             'descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Por ejemplo: pote de 250 ml'}),
             'etiquetas': forms.CheckboxSelectMultiple,
+            'stock_actual': forms.NumberInput(attrs={'min': 0, 'max': LIMITE_STOCK}),
+            'stock_minimo': forms.NumberInput(attrs={'min': 0, 'max': LIMITE_STOCK}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -36,13 +42,30 @@ class ProductoForm(forms.ModelForm):
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['categoria'].empty_label = 'Sin grupo'
         self.fields['etiquetas'].queryset = Etiqueta.objects.order_by('nombre')
-
-    # Validación propia: el nombre debe tener al menos 3 letras
     def clean_nombre(self):
         nombre = self.cleaned_data['nombre'].strip()
         if len(nombre) < 3:
             raise forms.ValidationError('El nombre debe tener al menos 3 caracteres.')
+        if not re.search(r'[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]', nombre):
+            raise forms.ValidationError('El nombre debe incluir letras, no solo números o símbolos.')
+        if not re.fullmatch(r'[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,()/%-]+', nombre):
+            raise forms.ValidationError('El nombre solo puede tener letras, números y espacios.')
         return nombre
+
+    def clean_stock_actual(self):
+        cantidad = self.cleaned_data['stock_actual']
+
+        if cantidad == 0 and self.instance.pk is None:
+            raise forms.ValidationError('Para agregar un producto debe haber al menos 1 unidad.')
+        if cantidad > LIMITE_STOCK:
+            raise forms.ValidationError(f'El máximo es {LIMITE_STOCK} unidades.')
+        return cantidad
+
+    def clean_stock_minimo(self):
+        minimo = self.cleaned_data['stock_minimo']
+        if minimo > LIMITE_STOCK:
+            raise forms.ValidationError(f'El máximo es {LIMITE_STOCK} unidades.')
+        return minimo
 
 
 class RegistroForm(UserCreationForm):
@@ -92,6 +115,8 @@ class MovimientoForm(forms.ModelForm):
         cantidad = self.cleaned_data['cantidad']
         if cantidad <= 0:
             raise forms.ValidationError('Escribe una cantidad mayor que cero.')
+        if cantidad > LIMITE_STOCK:
+            raise forms.ValidationError(f'El máximo es {LIMITE_STOCK} unidades.')
         return cantidad
 
     def clean(self):
@@ -102,3 +127,33 @@ class MovimientoForm(forms.ModelForm):
         if tipo == 'SALIDA' and producto and cantidad and cantidad > producto.stock_actual:
             self.add_error('cantidad', f'Hay {producto.stock_actual} unidades y se piden {cantidad}.')
         return datos
+
+
+class CategoriaForm(forms.ModelForm):
+    class Meta:
+        model = Categoria
+        fields = ['nombre']
+        labels = {'nombre': 'Nombre del grupo'}
+        widgets = {'nombre': forms.TextInput(attrs={'placeholder': 'Por ejemplo: Facial'})}
+        error_messages = {'nombre': {'required': 'Escribe el nombre del grupo.'}}
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre'].strip()
+        if Categoria.objects.filter(nombre__iexact=nombre).exists():
+            raise forms.ValidationError('Ese grupo ya existe.')
+        return nombre
+
+
+class EtiquetaForm(forms.ModelForm):
+    class Meta:
+        model = Etiqueta
+        fields = ['nombre']
+        labels = {'nombre': 'Nombre de la etiqueta'}
+        widgets = {'nombre': forms.TextInput(attrs={'placeholder': 'Por ejemplo: Frágil'})}
+        error_messages = {'nombre': {'required': 'Escribe el nombre de la etiqueta.'}}
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data['nombre'].strip()
+        if Etiqueta.objects.filter(nombre__iexact=nombre).exists():
+            raise forms.ValidationError('Esa etiqueta ya existe.')
+        return nombre

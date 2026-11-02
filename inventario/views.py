@@ -7,8 +7,8 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Q, ProtectedError
 from django.urls import reverse_lazy
-from .models import Producto, Categoria
-from .forms import ProductoForm, RegistroForm, PerfilForm
+from .models import Producto, Categoria, Etiqueta
+from .forms import ProductoForm, RegistroForm, PerfilForm, CategoriaForm, EtiquetaForm
 
 
 # ---------- Listado (pantalla principal) ----------
@@ -18,6 +18,7 @@ def home(request):
     q = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '')
 
+    # select_related y prefetch_related evitan consultas repetidas por fila
     productos = (
         Producto.objects
         .select_related('categoria', 'usuario')
@@ -32,6 +33,7 @@ def home(request):
     paginator = Paginator(productos, 5)
     page_obj = paginator.get_page(request.GET.get('page'))
 
+    # Para conservar búsqueda y filtro al cambiar de página
     params = request.GET.copy()
     params.pop('page', None)
 
@@ -75,7 +77,7 @@ def producto_crear(request):
             producto = form.save(commit=False)
             producto.usuario = request.user
             producto.save()
-            form.save_m2m()  
+            form.save_m2m()   # guarda las etiquetas
             messages.success(request, 'Producto creado correctamente.')
             return redirect('home')
         messages.error(request, 'Revisa los datos del formulario.')
@@ -114,6 +116,37 @@ def producto_eliminar(request, pk):
             messages.error(request, 'No se puede eliminar: el producto tiene movimientos registrados.')
         return redirect('home')
     return render(request, 'inventario/producto_eliminar.html', {'producto': producto})
+
+
+# ---------- Grupos y etiquetas ----------
+
+@login_required
+def grupos(request):
+    form_categoria = CategoriaForm()
+    form_etiqueta = EtiquetaForm()
+
+    if request.method == 'POST':
+        if 'guardar_categoria' in request.POST:
+            form_categoria = CategoriaForm(request.POST)
+            if form_categoria.is_valid():
+                form_categoria.save()
+                messages.success(request, 'Grupo creado correctamente.')
+                return redirect('grupos')
+            messages.error(request, 'Revisa el nombre del grupo.')
+        elif 'guardar_etiqueta' in request.POST:
+            form_etiqueta = EtiquetaForm(request.POST)
+            if form_etiqueta.is_valid():
+                form_etiqueta.save()
+                messages.success(request, 'Etiqueta creada correctamente.')
+                return redirect('grupos')
+            messages.error(request, 'Revisa el nombre de la etiqueta.')
+
+    return render(request, 'inventario/grupos.html', {
+        'categorias': Categoria.objects.order_by('nombre'),
+        'etiquetas': Etiqueta.objects.order_by('nombre'),
+        'form_categoria': form_categoria,
+        'form_etiqueta': form_etiqueta,
+    })
 
 
 # ---------- Cuenta de usuario ----------

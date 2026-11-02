@@ -4,6 +4,7 @@
 <p><a href="{% url 'home' %}">‹ Volver a los productos</a></p>
 <h1>{{ titulo }}</h1>
 <div class="tarjeta">
+  <p>¿No encuentras el grupo o la etiqueta? <a href="{% url 'grupos' %}">Créalos aquí</a> y vuelve a este formulario.</p>
   <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
