@@ -5,10 +5,47 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q, ProtectedError
 from django.urls import reverse_lazy
 from .models import Producto, Categoria, Etiqueta
-from .forms import ProductoForm, RegistroForm, PerfilForm, CategoriaForm, EtiquetaForm
+from .forms import ProductoForm, RegistroForm, PerfilForm, CategoriaForm, EtiquetaForm, MovimientoForm
+
+
+# ---------- Inicio ----------
+
+@login_required
+def inicio(request):
+    por_acabarse = []
+    for p in Producto.objects.order_by('nombre'):
+        if p.stock_actual <= p.stock_minimo:
+            por_acabarse.append(p)
+    return render(request, 'inventario/inicio.html', {'por_acabarse': por_acabarse})
+
+
+# ---------- Entradas y salidas ----------
+
+@login_required
+def movimiento_crear(request):
+    if request.method == 'POST':
+        form = MovimientoForm(request.POST)
+        if form.is_valid():
+            movimiento = form.save(commit=False)
+            movimiento.usuario = request.user
+            producto = movimiento.producto
+            with transaction.atomic():
+                if movimiento.tipo == 'ENTRADA':
+                    producto.stock_actual += movimiento.cantidad
+                else:
+                    producto.stock_actual -= movimiento.cantidad
+                producto.save()
+                movimiento.save()
+            messages.success(request, f'Listo: ahora quedan {producto.stock_actual} unidades de {producto.nombre}.')
+            return redirect('inicio')
+        messages.error(request, 'Revisa los datos del formulario.')
+    else:
+        form = MovimientoForm()
+    return render(request, 'inventario/movimiento_form.html', {'form': form})
 
 
 # ---------- Listado (pantalla principal) ----------
@@ -18,7 +55,7 @@ def home(request):
     q = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '')
 
-    # select_related y prefetch_related evitan consultas repetidas por fila
+
     productos = (
         Producto.objects
         .select_related('categoria', 'usuario')
@@ -33,7 +70,6 @@ def home(request):
     paginator = Paginator(productos, 5)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    # Para conservar búsqueda y filtro al cambiar de página
     params = request.GET.copy()
     params.pop('page', None)
 
@@ -77,7 +113,7 @@ def producto_crear(request):
             producto = form.save(commit=False)
             producto.usuario = request.user
             producto.save()
-            form.save_m2m()   # guarda las etiquetas
+            form.save_m2m()   
             messages.success(request, 'Producto creado correctamente.')
             return redirect('home')
         messages.error(request, 'Revisa los datos del formulario.')

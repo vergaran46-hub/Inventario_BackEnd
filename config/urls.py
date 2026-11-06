@@ -5,7 +5,9 @@ from inventario import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.home, name='home'),
+    path('', views.inicio, name='inicio'),
+    path('movimiento/', views.movimiento_crear, name='movimiento_crear'),
+    path('productos/', views.home, name='home'),
     path('mis-productos/', views.mis_productos, name='mis_productos'),
     path('producto/<int:pk>/', views.producto_detalle, name='producto_detalle'),
     path('producto/nuevo/', views.producto_crear, name='producto_crear'),

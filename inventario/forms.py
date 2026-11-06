@@ -42,14 +42,13 @@ class ProductoForm(forms.ModelForm):
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['categoria'].empty_label = 'Sin grupo'
         self.fields['etiquetas'].queryset = Etiqueta.objects.order_by('nombre')
+
     def clean_nombre(self):
         nombre = self.cleaned_data['nombre'].strip()
         if len(nombre) < 3:
             raise forms.ValidationError('El nombre debe tener al menos 3 caracteres.')
-        if not re.search(r'[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]', nombre):
-            raise forms.ValidationError('El nombre debe incluir letras, no solo números o símbolos.')
-        if not re.fullmatch(r'[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,()/%-]+', nombre):
-            raise forms.ValidationError('El nombre solo puede tener letras, números y espacios.')
+        if nombre.isdigit():
+            raise forms.ValidationError('El nombre debe incluir letras, no solo números.')
         return nombre
 
     def clean_stock_actual(self):
