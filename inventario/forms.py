@@ -6,6 +6,7 @@ from .models import Producto, Categoria, Etiqueta, Movimiento
 
 
 LIMITE_STOCK = 100
+MINIMO_AL_CREAR = 1
 
 
 class ProductoForm(forms.ModelForm):
@@ -42,6 +43,8 @@ class ProductoForm(forms.ModelForm):
         self.fields['categoria'].queryset = Categoria.objects.order_by('nombre')
         self.fields['categoria'].empty_label = 'Sin grupo'
         self.fields['etiquetas'].queryset = Etiqueta.objects.order_by('nombre')
+        if self.instance.pk is None:
+            self.fields['stock_actual'].widget.attrs['min'] = MINIMO_AL_CREAR
 
     def clean_nombre(self):
         nombre = self.cleaned_data['nombre'].strip()
@@ -54,8 +57,8 @@ class ProductoForm(forms.ModelForm):
     def clean_stock_actual(self):
         cantidad = self.cleaned_data['stock_actual']
 
-        if cantidad == 0 and self.instance.pk is None:
-            raise forms.ValidationError('Para agregar un producto debe haber al menos 1 unidad.')
+        if cantidad < MINIMO_AL_CREAR and self.instance.pk is None:
+            raise forms.ValidationError(f'Para agregar un producto debe haber al menos {MINIMO_AL_CREAR} unidades.')
         if cantidad > LIMITE_STOCK:
             raise forms.ValidationError(f'El máximo es {LIMITE_STOCK} unidades.')
         return cantidad
