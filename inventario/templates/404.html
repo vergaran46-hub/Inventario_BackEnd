@@ -1,0 +1,10 @@
+{% extends 'inventario/base.html' %}
+{% block titulo %}Página no encontrada{% endblock %}
+{% block contenido %}
+<h1>Página no encontrada</h1>
+<div class="tarjeta">
+  <p>La página que buscas no existe o no está disponible.</p>
+  <a class="btn" href="{% url 'home' %}">Volver a los productos</a>
+</div>
+{% endblock %}
+
