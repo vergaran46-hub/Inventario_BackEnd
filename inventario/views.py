@@ -1,19 +1,26 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import PermissionDenied
+from django.conf import settings
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, ProtectedError
+from django.http import Http404
 from django.urls import reverse_lazy
 from .models import Producto, Categoria, Etiqueta
+from .permisos import solo_administradora
 from .forms import ProductoForm, RegistroForm, PerfilForm, CategoriaForm, EtiquetaForm, MovimientoForm
-
-
+ 
+ 
+MAX_INTENTOS_LOGIN = 5
+BLOQUEO_SEGUNDOS = 15 * 60
+ 
+ 
 # ---------- Inicio ----------
-
+ 
 @login_required
 def inicio(request):
     por_acabarse = []
@@ -21,10 +28,10 @@ def inicio(request):
         if p.stock_actual <= p.stock_minimo:
             por_acabarse.append(p)
     return render(request, 'inventario/inicio.html', {'por_acabarse': por_acabarse})
-
-
+ 
+ 
 # ---------- Entradas y salidas ----------
-
+ 
 @login_required
 def movimiento_crear(request):
     if request.method == 'POST':
@@ -46,16 +53,16 @@ def movimiento_crear(request):
     else:
         form = MovimientoForm()
     return render(request, 'inventario/movimiento_form.html', {'form': form})
-
-
+ 
+ 
 # ---------- Listado (pantalla principal) ----------
-
+ 
 @login_required
 def home(request):
     q = request.GET.get('q', '').strip()
     categoria_id = request.GET.get('categoria', '')
-
-
+ 
+ 
     productos = (
         Producto.objects
         .select_related('categoria', 'usuario')
@@ -66,13 +73,13 @@ def home(request):
         productos = productos.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
     if categoria_id.isdigit():
         productos = productos.filter(categoria_id=categoria_id)
-
+ 
     paginator = Paginator(productos, 5)
     page_obj = paginator.get_page(request.GET.get('page'))
-
+ 
     params = request.GET.copy()
     params.pop('page', None)
-
+ 
     return render(request, 'inventario/home.html', {
         'page_obj': page_obj,
         'categorias': Categoria.objects.order_by('nombre'),
@@ -80,9 +87,10 @@ def home(request):
         'categoria_id': categoria_id,
         'querystring': params.urlencode(),
     })
-
-
+ 
+ 
 @login_required
+@solo_administradora
 def mis_productos(request):
     productos = (
         Producto.objects
@@ -92,10 +100,10 @@ def mis_productos(request):
         .order_by('nombre')
     )
     return render(request, 'inventario/mis_productos.html', {'productos': productos})
-
-
+ 
+ 
 # ---------- CRUD ----------
-
+ 
 @login_required
 def producto_detalle(request, pk):
     producto = get_object_or_404(
@@ -103,9 +111,10 @@ def producto_detalle(request, pk):
         pk=pk
     )
     return render(request, 'inventario/producto_detalle.html', {'producto': producto})
-
-
+ 
+ 
 @login_required
+@solo_administradora
 def producto_crear(request):
     if request.method == 'POST':
         form = ProductoForm(request.POST)
@@ -120,13 +129,12 @@ def producto_crear(request):
     else:
         form = ProductoForm()
     return render(request, 'inventario/producto_form.html', {'form': form, 'titulo': 'Agregar un producto'})
-
-
+ 
+ 
 @login_required
+@solo_administradora
 def producto_editar(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
-    if producto.usuario != request.user:
-        raise PermissionDenied
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto)
         if form.is_valid():
@@ -137,13 +145,12 @@ def producto_editar(request, pk):
     else:
         form = ProductoForm(instance=producto)
     return render(request, 'inventario/producto_form.html', {'form': form, 'titulo': 'Editar producto'})
-
-
+ 
+ 
 @login_required
+@solo_administradora
 def producto_eliminar(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
-    if producto.usuario != request.user:
-        raise PermissionDenied
     if request.method == 'POST':
         try:
             producto.delete()
@@ -152,15 +159,16 @@ def producto_eliminar(request, pk):
             messages.error(request, 'No se puede eliminar: el producto tiene movimientos registrados.')
         return redirect('home')
     return render(request, 'inventario/producto_eliminar.html', {'producto': producto})
-
-
+ 
+ 
 # ---------- Grupos y etiquetas ----------
-
+ 
 @login_required
+@solo_administradora
 def grupos(request):
     form_categoria = CategoriaForm()
     form_etiqueta = EtiquetaForm()
-
+ 
     if request.method == 'POST':
         if 'guardar_categoria' in request.POST:
             form_categoria = CategoriaForm(request.POST)
@@ -176,18 +184,20 @@ def grupos(request):
                 messages.success(request, 'Etiqueta creada correctamente.')
                 return redirect('grupos')
             messages.error(request, 'Revisa el nombre de la etiqueta.')
-
+ 
     return render(request, 'inventario/grupos.html', {
         'categorias': Categoria.objects.order_by('nombre'),
         'etiquetas': Etiqueta.objects.order_by('nombre'),
         'form_categoria': form_categoria,
         'form_etiqueta': form_etiqueta,
     })
-
-
+ 
+ 
 # ---------- Cuenta de usuario ----------
-
+ 
 def registro(request):
+    if not settings.REGISTRO_ABIERTO:
+        raise Http404
     if request.method == 'POST':
         form = RegistroForm(request.POST)
         if form.is_valid():
@@ -198,8 +208,8 @@ def registro(request):
     else:
         form = RegistroForm()
     return render(request, 'inventario/registro.html', {'form': form})
-
-
+ 
+ 
 @login_required
 def perfil(request):
     if request.method == 'POST':
@@ -213,8 +223,32 @@ def perfil(request):
         form = PerfilForm(instance=request.user)
     total = request.user.productos.count()
     return render(request, 'inventario/perfil.html', {'form': form, 'total': total})
-
-
+ 
+ 
+class LoginSeguroView(LoginView):
+    template_name = 'inventario/login.html'
+ 
+    def _clave(self, request):
+        usuario = (request.POST.get('username') or '').strip().lower()
+        return f'login:{usuario}'
+ 
+    def post(self, request, *args, **kwargs):
+        if cache.get(self._clave(request), 0) >= MAX_INTENTOS_LOGIN:
+            form = self.get_form()
+            form.add_error(None, 'Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo.')
+            return self.render_to_response(self.get_context_data(form=form), status=429)
+        return super().post(request, *args, **kwargs)
+ 
+    def form_invalid(self, form):
+        clave = self._clave(self.request)
+        cache.set(clave, cache.get(clave, 0) + 1, BLOQUEO_SEGUNDOS)
+        return super().form_invalid(form)
+ 
+    def form_valid(self, form):
+        cache.delete(self._clave(self.request))
+        return super().form_valid(form)
+ 
+ 
 class CambiarPasswordView(SuccessMessageMixin, PasswordChangeView):
     template_name = 'inventario/cambiar_password.html'
     success_url = reverse_lazy('perfil')

@@ -2,7 +2,7 @@
 {% block titulo %}Productos en bodega{% endblock %}
 {% block contenido %}
 <h1>Productos en bodega</h1>
-
+ 
 <div class="tarjeta">
   <form method="get" class="buscador">
     <input type="text" name="q" value="{{ q }}" placeholder="Busca por nombre o descripción">
@@ -13,10 +13,10 @@
       {% endfor %}
     </select>
     <button class="btn" type="submit">Buscar</button>
-    <a class="btn btn-claro" href="{% url 'producto_crear' %}">+ Agregar un producto</a>
+    {% if es_administradora %}<a class="btn btn-claro" href="{% url 'producto_crear' %}">+ Agregar un producto</a>{% endif %}
   </form>
 </div>
-
+ 
 <div class="tarjeta">
   <table>
     <tr>
@@ -38,7 +38,7 @@
       <td>{{ p.usuario.username|default:"-" }}</td>
       <td>
         <a href="{% url 'producto_detalle' p.pk %}">Ver</a>
-        {% if p.usuario == user %}
+        {% if es_administradora %}
           · <a href="{% url 'producto_editar' p.pk %}">Editar</a>
           · <a href="{% url 'producto_eliminar' p.pk %}">Eliminar</a>
         {% endif %}
@@ -54,7 +54,7 @@
     </td></tr>
     {% endfor %}
   </table>
-
+ 
   {% if page_obj.paginator.num_pages > 1 %}
   <div class="paginacion">
     {% if page_obj.has_previous %}

@@ -19,7 +19,7 @@
     {% endif %}
   </p>
   <p><strong>Registrado por:</strong> {{ producto.usuario.username|default:"-" }}</p>
-  {% if producto.usuario == user %}
+  {% if es_administradora %}
     <a class="btn" href="{% url 'producto_editar' producto.pk %}">Editar</a>
     <a class="btn btn-claro" href="{% url 'producto_eliminar' producto.pk %}">Eliminar</a>
   {% endif %}
