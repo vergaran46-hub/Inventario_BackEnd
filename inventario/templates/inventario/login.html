@@ -20,12 +20,12 @@
       {% endif %}
       <form method="post">
         {% csrf_token %}
-        {% if form.errors %}<p class="error">Usuario o contraseña incorrectos.</p>{% endif %}
+        {% for error in form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}
         <input type="text" name="username" placeholder="Usuario" required autofocus>
         <input type="password" name="password" placeholder="Contraseña" required>
         <button class="btn" type="submit">Ingresar</button>
       </form>
-      <p><a href="{% url 'registro' %}">Crear una cuenta</a></p>
+      {% if registro_abierto %}<p><a href="{% url 'registro' %}">Crear una cuenta</a></p>{% endif %}
     </div>
   </div>
 </body>
