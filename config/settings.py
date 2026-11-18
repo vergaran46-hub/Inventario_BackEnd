@@ -136,3 +136,16 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
  
 LOGOUT_REDIRECT_URL = 'login'
+
+SESSION_COOKIE_AGE = 30 * 60
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {'simple': {'format': '{asctime} {levelname} {name} {message}', 'style': '{'}},
+    'handlers': {'console': {'class': 'logging.StreamHandler', 'formatter': 'simple'}},
+    'loggers': {
+        'inventario.auditoria': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}
