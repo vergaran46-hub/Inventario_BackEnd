@@ -117,3 +117,14 @@ class ProteccionesTests(BaseSeguridad):
         Producto.objects.create(nombre='<script>alert(1)</script>', stock_actual=1, stock_minimo=1, usuario=self.admin)
         r = self.client.get(reverse('home'))
         self.assertNotContains(r, '<script>alert(1)</script>')
+        
+class SesionYAuditoriaTests(BaseSeguridad):
+    def test_la_sesion_expira_a_los_30_minutos_de_inactividad(self):
+        self.entrar('romina')
+        self.assertEqual(self.client.session.get_expiry_age(), 30 * 60)
+
+    def test_cambio_de_grupo_queda_en_el_registro(self):
+        grupo = Group.objects.get(name='Administradora')
+        with self.assertLogs('inventario.auditoria', level='WARNING') as registro:
+            self.asistente.groups.add(grupo)
+        self.assertIn('cambio de grupos', registro.output[0])
