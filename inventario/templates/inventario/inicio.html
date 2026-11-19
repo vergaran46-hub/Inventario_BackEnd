@@ -40,4 +40,26 @@
     <p class="ok">Por ahora no se está acabando nada.</p>
   {% endif %}
 </section>
+
+<section class="tarjeta">
+  <h2>Últimos movimientos</h2>
+  {% if ultimos %}
+    <table>
+      <thead>
+        <tr><th>Producto</th><th>Movimiento</th><th>Cantidad</th></tr>
+      </thead>
+      <tbody>
+        {% for m in ultimos %}
+        <tr>
+          <td>{{ m.producto.nombre }}</td>
+          <td>{{ m.get_tipo_display }} por {{ m.get_motivo_display|lower }}</td>
+          <td>{{ m.cantidad }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Todavía no hay movimientos registrados.</p>
+  {% endif %}
+</section>
 {% endblock %}
