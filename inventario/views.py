@@ -8,7 +8,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, ProtectedError
 from django.urls import reverse_lazy
-from .models import Producto, Categoria, Etiqueta
+from .models import Producto, Categoria, Etiqueta, Movimiento
 from .forms import ProductoForm, RegistroForm, PerfilForm, CategoriaForm, EtiquetaForm, MovimientoForm
 
 
@@ -20,7 +20,8 @@ def inicio(request):
     for p in Producto.objects.order_by('nombre'):
         if p.stock_actual <= p.stock_minimo:
             por_acabarse.append(p)
-    return render(request, 'inventario/inicio.html', {'por_acabarse': por_acabarse})
+    ultimos = Movimiento.objects.select_related('producto', 'usuario').order_by('-fecha')[:5]
+    return render(request, 'inventario/inicio.html', {'por_acabarse': por_acabarse, 'ultimos': ultimos})
 
 
 # ---------- Entradas y salidas ----------
