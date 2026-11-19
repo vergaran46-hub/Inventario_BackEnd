@@ -125,7 +125,12 @@ class MovimientoForm(forms.ModelForm):
         datos = super().clean()
         producto = datos.get('producto')
         tipo = datos.get('tipo')
+        motivo = datos.get('motivo')
         cantidad = datos.get('cantidad')
+        if tipo == 'ENTRADA' and motivo in ('VENTA', 'USO_INTERNO'):
+            self.add_error('motivo', 'Una entrada solo puede ser por compra.')
+        if tipo == 'SALIDA' and motivo == 'COMPRA':
+            self.add_error('motivo', 'Una salida solo puede ser por venta o uso interno.')
         if tipo == 'SALIDA' and producto and cantidad and cantidad > producto.stock_actual:
             self.add_error('cantidad', f'Hay {producto.stock_actual} unidades y se piden {cantidad}.')
         return datos
