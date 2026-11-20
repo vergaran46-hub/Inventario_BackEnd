@@ -8,8 +8,13 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, ProtectedError
 from django.urls import reverse_lazy
+from django.utils import timezone
+from datetime import datetime, time, timedelta
 from .models import Producto, Categoria, Etiqueta, Movimiento
 from .forms import ProductoForm, RegistroForm, PerfilForm, CategoriaForm, EtiquetaForm, MovimientoForm
+
+
+VENTAS_PARA_COMPRAR = 5
 
 
 # ---------- Inicio ----------
@@ -153,6 +158,63 @@ def producto_eliminar(request, pk):
             messages.error(request, 'No se puede eliminar: el producto tiene movimientos registrados.')
         return redirect('home')
     return render(request, 'inventario/producto_eliminar.html', {'producto': producto})
+
+
+# ---------- Reporte ----------
+
+@login_required
+def reporte(request):
+    hoy = timezone.localdate()
+    try:
+        desde = datetime.strptime(request.GET.get('desde', ''), '%Y-%m-%d').date()
+        hasta = datetime.strptime(request.GET.get('hasta', ''), '%Y-%m-%d').date()
+    except ValueError:
+        desde = hoy - timedelta(days=30)
+        hasta = hoy
+    orden = request.GET.get('orden', 'menos')
+    producto_id = request.GET.get('producto', '')
+
+    inicio = timezone.make_aware(datetime.combine(desde, time.min))
+    fin = timezone.make_aware(datetime.combine(hasta, time.max))
+    ventas = Movimiento.objects.filter(motivo='VENTA', fecha__gte=inicio, fecha__lte=fin)
+
+    productos = Producto.objects.order_by('nombre')
+    if producto_id:
+        elegidos = productos.filter(pk=producto_id)
+    else:
+        elegidos = productos
+
+    filas = []
+    for p in elegidos:
+        vendidas = 0
+        for m in ventas:
+            if m.producto_id == p.id:
+                vendidas += m.cantidad
+        filas.append((vendidas, p.nombre, p.stock_actual))
+    if orden == 'mas':
+        filas.sort(reverse=True)
+    else:
+        filas.sort()
+
+    maximo = 1
+    for f in filas:
+        if f[0] > maximo:
+            maximo = f[0]
+    tabla = []
+    for vendidas, nombre, stock in filas:
+        tabla.append((vendidas, nombre, stock, vendidas * 100 // maximo))
+
+    aviso = ''
+    if tabla and orden == 'menos' and tabla[0][0] < VENTAS_PARA_COMPRAR:
+        aviso = f'«{tabla[0][1]}» vendió muy poco en el período (solo {tabla[0][0]}) y quedan {tabla[0][2]} en bodega. Quizás no conviene volver a comprarla.'
+    if tabla and orden == 'mas' and tabla[0][0] >= VENTAS_PARA_COMPRAR:
+        aviso = f'«{tabla[0][1]}» es lo que más se vendió (en total {tabla[0][0]}) y quedan {tabla[0][2]} en bodega. Conviene no quedarse sin stock.'
+
+    return render(request, 'inventario/reporte.html', {
+        'tabla': tabla, 'aviso': aviso, 'productos': productos,
+        'desde': desde, 'hasta': hasta,
+        'orden': orden, 'producto_id': producto_id,
+    })
 
 
 # ---------- Grupos y etiquetas ----------
