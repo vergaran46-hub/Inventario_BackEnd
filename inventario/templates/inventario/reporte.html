@@ -42,5 +42,13 @@
     <tr><td colspan="5">No hay productos para mostrar.</td></tr>
     {% endfor %}
   </table>
+  {% if aviso %}
+  <p class="aviso"><strong>Para pensar:</strong> {{ aviso }}</p>
+  {% endif %}
+
+  <p>
+    <button class="btn btn-claro" type="button" onclick="window.print()">Imprimir este reporte</button>
+    <a class="btn btn-claro" href="{% url 'home' %}">Volver a productos</a>
+  </p>
 </div>
 {% endblock %}
