@@ -46,14 +46,16 @@
   {% if ultimos %}
     <table>
       <thead>
-        <tr><th>Producto</th><th>Movimiento</th><th>Cantidad</th></tr>
+        <tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Cantidad</th><th>Registrado por</th></tr>
       </thead>
       <tbody>
         {% for m in ultimos %}
         <tr>
+          <td>{{ m.fecha|date:"d/m/Y H:i" }}</td>
           <td>{{ m.producto.nombre }}</td>
           <td>{{ m.get_tipo_display }} por {{ m.get_motivo_display|lower }}</td>
           <td>{{ m.cantidad }}</td>
+          <td>{{ m.usuario.username }}</td>
         </tr>
         {% endfor %}
       </tbody>
