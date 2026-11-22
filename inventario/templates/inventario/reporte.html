@@ -25,4 +25,22 @@
     <button class="btn" type="submit">Ver reporte</button>
   </form>
 </div>
+<div class="tarjeta">
+  <h2>{% if orden == 'mas' %}Los productos más vendidos{% else %}Los productos menos vendidos{% endif %}</h2>
+  <p>Del {{ desde|date:"d/m/Y" }} al {{ hasta|date:"d/m/Y" }} · solo se cuentan las salidas por venta</p>
+  <table>
+    <tr><th>Puesto</th><th>Producto</th><th>Unidades vendidas</th><th>Comparación</th><th>Quedan hoy</th></tr>
+    {% for vendidas, nombre, stock, porcentaje in tabla %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ nombre }}</td>
+      <td>{{ vendidas }}</td>
+      <td><div class="barra"><div class="barra-relleno" style="width: {{ porcentaje }}%"></div></div></td>
+      <td>{{ stock }} unidades</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No hay productos para mostrar.</td></tr>
+    {% endfor %}
+  </table>
+</div>
 {% endblock %}
