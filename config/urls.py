@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.inicio, name='inicio'),
     path('movimiento/', views.movimiento_crear, name='movimiento_crear'),
+    path('reporte/', views.reporte, name='reporte'),
     path('productos/', views.home, name='home'),
     path('mis-productos/', views.mis_productos, name='mis_productos'),
     path('producto/<int:pk>/', views.producto_detalle, name='producto_detalle'),

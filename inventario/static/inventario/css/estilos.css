@@ -473,3 +473,24 @@ a.opcion:hover {
   color: #4a4a47;
   margin: 12px 0 0;
 }
+
+
+.barra {
+  background: #f0e6df;
+  border-radius: 10px;
+  height: 14px;
+  width: 100%;
+}
+
+.barra-relleno {
+  background: var(--rosa);
+  border-radius: 10px;
+  height: 14px;
+}
+
+.aviso {
+  background: #f6dad7;
+  color: #8e2f26;
+  border-radius: 12px;
+  padding: 14px 18px;
+}

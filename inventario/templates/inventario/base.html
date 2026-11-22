@@ -16,6 +16,7 @@
         <a href="{% url 'inicio' %}">Inicio</a>
         <a href="{% url 'home' %}">Productos en bodega</a>
         <a href="{% url 'mis_productos' %}">Mis productos</a>
+        <a href="{% url 'reporte' %}">Reportes</a>        
         <a href="{% url 'grupos' %}">Grupos y etiquetas</a>
         <a href="{% url 'perfil' %}">Mi cuenta ({{ user.username }})</a>
         <form method="post" action="{% url 'logout' %}" style="display:inline">
