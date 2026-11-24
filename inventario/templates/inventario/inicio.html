@@ -29,7 +29,7 @@
         {% for p in por_acabarse %}
         <tr>
           <td>{{ p.nombre }}</td>
-          <td>{{ p.categoria }}</td>
+          <td>{{ p.categoria|default:"Sin grupo" }}</td>
           <td class="alerta">{{ p.stock_actual }} unidad{{ p.stock_actual|pluralize:"es" }}</td>
           <td>{{ p.stock_minimo }} unidad{{ p.stock_minimo|pluralize:"es" }}</td>
         </tr>
