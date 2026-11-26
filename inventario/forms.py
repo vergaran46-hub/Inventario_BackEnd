@@ -2,6 +2,7 @@ import re
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.utils import timezone
 from .models import Producto, Categoria, Etiqueta, Movimiento
 
 
@@ -20,10 +21,12 @@ class ProductoForm(forms.ModelForm):
             'descripcion': 'Descripción (opcional)',
             'stock_actual': '¿Cuántas unidades tienes hoy?',
             'stock_minimo': 'Avisarme cuando queden...',
+            'fecha_compra': '¿Cuándo se compró? (opcional)',
         }
         help_texts = {
             'etiquetas': 'Marca todas las que apliquen.',
             'stock_minimo': 'Cuando queden estas unidades o menos, el sistema te avisará que hay que comprar.',
+            'fecha_compra': 'Es la fecha de la factura. La fecha de registro la pone el sistema con la fecha de hoy.',
         }
         error_messages = {
             'nombre': {'required': 'Falta el nombre del producto. Escríbelo para poder guardar.'},
@@ -36,6 +39,7 @@ class ProductoForm(forms.ModelForm):
             'etiquetas': forms.CheckboxSelectMultiple,
             'stock_actual': forms.NumberInput(attrs={'min': 0, 'max': LIMITE_STOCK}),
             'stock_minimo': forms.NumberInput(attrs={'min': 0, 'max': LIMITE_STOCK}),
+            'fecha_compra': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
 
     def __init__(self, *args, **kwargs):
