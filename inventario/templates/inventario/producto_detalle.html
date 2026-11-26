@@ -18,6 +18,8 @@
       <span class="ok">El stock es suficiente.</span>
     {% endif %}
   </p>
+  <p><strong>Fecha de compra:</strong> {{ producto.fecha_compra|date:"d/m/Y"|default:"Sin fecha" }}</p>
+  <p><strong>Fecha de registro:</strong> {{ producto.fecha_registro|date:"d/m/Y H:i" }}</p>
   <p><strong>Registrado por:</strong> {{ producto.usuario.username|default:"-" }}</p>
   {% if producto.usuario == user %}
     <a class="btn" href="{% url 'producto_editar' producto.pk %}">Editar</a>

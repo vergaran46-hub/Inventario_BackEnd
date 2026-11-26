@@ -35,6 +35,8 @@
           <span class="ok">Suficiente</span>
         {% endif %}
       </td>
+      <td>{{ p.fecha_compra|date:"d/m/Y"|default:"-" }}</td>
+      <td>{{ p.fecha_registro|date:"d/m/Y H:i" }}</td>
       <td>{{ p.usuario.username|default:"-" }}</td>
       <td>
         <a href="{% url 'producto_detalle' p.pk %}">Ver</a>
