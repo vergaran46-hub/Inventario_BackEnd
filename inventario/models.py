@@ -25,6 +25,8 @@ class Producto(models.Model):
     stock_actual = models.PositiveIntegerField(default=0)
     stock_minimo = models.PositiveIntegerField(default=0)
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='productos', null=True, blank=True)
+    fecha_compra = models.DateField(null=True, blank=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nombre
